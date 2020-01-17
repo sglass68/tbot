@@ -18,7 +18,7 @@ import abc
 import typing
 import tbot
 from .. import shell, channel
-from . import path, workdir
+from . import path, workdir, util
 from .special import Special
 
 Self = typing.TypeVar("Self", bound="LinuxShell")
@@ -156,6 +156,39 @@ class LinuxShell(shell.Shell):
         :returns: Current (new) value of the environment variable.
         """
         raise NotImplementedError("abstract method")
+
+    def run(
+        self: Self, *args: typing.Union[str, Special[Self], path.Path[Self]]
+    ) -> typing.ContextManager[util.RunCommandProxy]:
+        """
+        Start an interactive command.
+
+        Interactive commands are started in a context-manager.  Inside, direct
+        interaction with the commands stdio is possible using a
+        :py:class:`~tbot.machine.linux.RunCommandProxy`.  **You must call one
+        of the** ``terminate*()`` **methods before leaving the context!**  The
+        proxy object provides an interface similar to pexpect for inteaction
+        (see the methods of the :py:class:`~tbot.machine.channel.Channel` class).
+
+        **Example**:
+
+        .. code-block:: python
+
+            with lh.run("gdb", lh.workdir / "a.out") as gdb:
+                gdb.sendline("target remote 127.0.0.1:3333")
+                gdb.sendline("load")
+
+                gdb.read_until_prompt("(gdb) ")
+                gdb.sendline("mon reset halt", read_back=True)
+                output = gdb.read_until_prompt("(gdb) ")
+
+                gdb.sendline("quit")
+                gbd.terminate0()
+        """
+        raise NotImplementedError(
+            f"This shell {self.__class__.__name__} does not"
+            + " support running interactive commands!"
+        )
 
     @abc.abstractmethod
     def open_channel(
