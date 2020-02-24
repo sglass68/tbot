@@ -19,7 +19,8 @@ import contextlib
 import typing
 
 from . import linux_shell, path
-
+import tbot
+from tbot.machine import linux
 
 class Toolchain(abc.ABC):
     """Generic toolchain type."""
@@ -142,3 +143,128 @@ class Builder(linux_shell.LinuxShell):
         with self.subshell():
             tc.enable(self)
             yield None
+
+class EnvSetLinaroToolchain(Toolchain):
+    """Toolchain from
+    https://releases.linaro.org/components/toolchain/binaries/
+    initialized through setting Shell Environment variables.
+
+    example configuration:
+
+    def toolchains(self) -> typing.Dict[str, linux.build.Toolchain]:
+        return {
+            "linaro-gnueabi": linux.build.EnvSetLinaroToolchain(
+                host_arch = "i686",
+                arch = "arm-linux-gnueabi",
+                date = "2018.05",
+                gcc_vers = "7.3",
+                gcc_subvers = "1",
+                ),
+            }
+
+    """
+
+    def enable(self, host: H) -> None:  # noqa: D102
+        td = host.workdir / "toolchain"
+        if not td.exists():
+            host.exec0("mkdir", "-p", td)
+        host.exec0("cd", td)
+        host.exec0("pwd")
+        ending = ".tar.xz"
+        path_name = "gcc-linaro-" + self.gcc_vers + "." + self.gcc_subvers + "-" + self.date + "-" + self.host_arch + "_" + self.arch
+        link_path = self.gcc_vers + "-" + self.date + "/" + self.arch + "/" + path_name
+        tooldir = td / path_name / "bin"
+        ret = host.exec("test", "-d", tooldir)
+        if ret[0] == 1:
+            host.exec0("wget", "https://releases.linaro.org/components/toolchain/binaries/" + link_path + ending)
+            host.exec0("tar", "-xJf", path_name + ending)
+            host.exec0("cd", path_name)
+        ret = host.exec("printenv", "PATH", tbot.machine.linux.Pipe, "grep", "--color=never", tooldir)
+        if ret[0] == 1:
+            host.exec0(linux.Raw("export PATH=" + str(tooldir).split(":")[1] + ":$PATH"))
+        host.exec0("printenv", "PATH")
+        if "arm" in self.arch:
+            host.exec0("export", "ARCH=arm" )
+            host.exec0("export", "CROSS_COMPILE=" + self.arch + "-")
+        else:
+            raise RuntimeError(self.arch + " not supported yet")
+
+        host.exec0("printenv", "ARCH")
+        host.exec0("printenv", "CROSS_COMPILE")
+
+    def __init__(self, host_arch: str, arch: str, date: str, gcc_vers: str, gcc_subvers: str) -> None:
+        """
+        Create a new EnvSetLinaroToolchain.
+
+        :param str host_arch: host architecture "i686"
+        :param str arch: target architecture "arm-linux-gnueabi"
+        :param str date: release date of the toolchain "2018.05"
+        :param str gcc_vers: gcc version "7.3"
+        :param str gcc_subvers: gcc subversion "1"
+        """
+        self.host_arch = host_arch
+        self.arch = arch
+        self.date = date
+        self.gcc_vers = gcc_vers
+        self.gcc_subvers = gcc_subvers
+
+class EnvSetBootlinToolchain(Toolchain):
+    """Toolchain from https://toolchains.bootlin.com/downloads/releases/toolchains
+    initialized through setting Shell Environment variables.
+
+    example configuration:
+
+    def toolchains(self) -> typing.Dict[str, linux.build.Toolchain]:
+        return {
+            "bootlin-armv5-eabi": linux.build.EnvSetBootlinToolchain(
+                arch = "armv5-eabi",
+                libc = "glibc",
+                typ = "stable",
+                date = "2018.11-1",
+                ),
+            }
+    """
+
+    def enable(self, host: H) -> None:  # noqa: D102
+        td = host.workdir / "toolchain"
+        if not td.exists():
+            host.exec0("mkdir", "-p", td)
+        host.exec0("cd", td)
+        host.exec0("pwd")
+        fn = self.arch + "--" + self.libc + "--" + self.typ + "-" + self.date
+        fn2 = self.arch + "/tarballs/" + fn
+        ending = ".tar.bz2"
+        tooldir = td / fn / "bin"
+        ret = host.exec("test", "-d", tooldir)
+        if ret[0] == 1:
+            msg = "Get toolchain " + fn
+            tbot.log.message(msg)
+            host.exec0("wget", "https://toolchains.bootlin.com/downloads/releases/toolchains/" + fn2 + ending)
+            host.exec0("tar", "xfj", fn + ending)
+            host.exec0("cd", fn)
+            host.exec0("./relocate-sdk.sh")
+        ret = host.exec("printenv", "PATH", tbot.machine.linux.Pipe, "grep", "--color=never", tooldir)
+        if ret[0] == 1:
+            msg = "Add toolchain to PATH", str(tooldir).split(":")[1]
+            tbot.log.message(msg)
+            host.exec0(linux.Raw("export PATH=" + str(tooldir).split(":")[1] + ":$PATH"))
+        host.exec0("printenv", "PATH")
+        if "arm" in self.arch:
+            host.exec0("export", "ARCH=arm" )
+            host.exec0("export", "CROSS_COMPILE=arm-linux-")
+        host.exec0("printenv", "ARCH")
+        host.exec0("printenv", "CROSS_COMPILE")
+
+    def __init__(self, arch: str, libc: str, typ: str, date: str) -> None:
+        """
+        Create a new EnvScriptToolchain.
+
+        :param str arch: architecture.
+        :param str libc: used libc.
+        :param str typ: "stable" or "bleeding-edge"
+        :param str date: release date of the toolchain
+        """
+        self.arch = arch
+        self.libc = libc
+        self.typ = typ
+        self.date = date
