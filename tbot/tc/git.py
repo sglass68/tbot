@@ -110,7 +110,7 @@ class GitRepository(linux.Path[H]):
                     self.reset("HEAD", ResetMode.HARD)
                 self.clean(untracked=True, noignore=True)
 
-            if clean or not already_cloned:
+            if not already_cloned:
                 if rev:
                     self.checkout(rev)
         else:
@@ -121,8 +121,8 @@ class GitRepository(linux.Path[H]):
                 self.reset("HEAD", ResetMode.HARD)
                 self.clean(untracked=True, noignore=True)
 
-                if rev:
-                    self.checkout(rev)
+            if rev:
+                self.checkout(rev)
 
     def git(
         self, *args: typing.Union[str, linux.Path[H], linux.special.Special]

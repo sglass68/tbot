@@ -99,14 +99,14 @@ class UBootAutobootIntercept(machine.Initializer, UbootStartup):
     def _init_machine(self) -> typing.Iterator:
         if self.autoboot_prompt is not None:
             with self.ch.with_stream(self._uboot_startup_event()):
-                timeout = None
-                if self.boot_timeout is not None:
-                    assert self._timeout_start is not None
-                    timeout = self.boot_timeout - (
-                        time.monotonic() - self._timeout_start
-                    )
-
-                self.ch.read_until_prompt(prompt=self.autoboot_prompt, timeout=timeout)
+                #timeout = None
+                #if self.boot_timeout is not None:
+                    #assert self._timeout_start is not None
+                    #timeout = self.boot_timeout - (
+                        #time.monotonic() - self._timeout_start
+                    #)
+                self.ch.read_until_prompt(prompt=self.autoboot_prompt,
+                                          timeout=30)
                 self.ch.send(self.autoboot_keys)
 
         yield None
