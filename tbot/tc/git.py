@@ -92,6 +92,8 @@ class GitRepository(linux.Path[H]):
         """
         super().__init__(target.host, target)
         if url is not None:
+            print('path1')
+            dwd
             # Clone and optionally clean repo
             already_cloned = self.host.test("test", "-d", self / ".git")
             if not already_cloned:
@@ -100,7 +102,7 @@ class GitRepository(linux.Path[H]):
             elif fetch:
                 self.git0("fetch")
 
-            if clean and already_cloned:
+            if already_cloned:
                 # Try resetting the branch to upstream, if the branch has an upstream
                 if rev and self.git("rev-parse", f"{rev}@{{u}}")[0] == 0:
                     self.reset(f"{rev}@{{u}}", ResetMode.HARD)
@@ -108,12 +110,14 @@ class GitRepository(linux.Path[H]):
                     self.reset("@{u}", ResetMode.HARD)
                 else:
                     self.reset("HEAD", ResetMode.HARD)
-                self.clean(untracked=True, noignore=True)
+                if clean:
+                    self.clean(untracked=True, noignore=True)
 
-            if not already_cloned:
+            else:
                 if rev:
                     self.checkout(rev)
         else:
+            print('path2')
             # Assume a repo is supposed to already exist
             if not (self / ".git").exists():
                 raise RuntimeError(f"{target} is not a git repository")
