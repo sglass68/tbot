@@ -225,6 +225,7 @@ class Bash(linux_shell.LinuxShell):
         with tbot.log_event.command(self.name, cmd):
             # Append `; exit` to ensure the channel won't live past the command
             # exiting
+            print('cmd', cmd)
             self.ch.sendline(cmd + "; exit", read_back=True)
 
         return self.ch.take()

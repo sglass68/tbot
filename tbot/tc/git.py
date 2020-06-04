@@ -92,8 +92,6 @@ class GitRepository(linux.Path[H]):
         """
         super().__init__(target.host, target)
         if url is not None:
-            print('path1')
-            dwd
             # Clone and optionally clean repo
             already_cloned = self.host.test("test", "-d", self / ".git")
             if not already_cloned:
@@ -104,14 +102,15 @@ class GitRepository(linux.Path[H]):
 
             if already_cloned:
                 # Try resetting the branch to upstream, if the branch has an upstream
-                if rev and self.git("rev-parse", f"{rev}@{{u}}")[0] == 0:
-                    self.reset(f"{rev}@{{u}}", ResetMode.HARD)
+                if rev:
+                    self.reset(rev, ResetMode.HARD)
                 elif self.git("rev-parse", "@{u}")[0] == 0:
                     self.reset("@{u}", ResetMode.HARD)
                 else:
                     self.reset("HEAD", ResetMode.HARD)
                 if clean:
                     self.clean(untracked=True, noignore=True)
+
 
             else:
                 if rev:
@@ -127,6 +126,7 @@ class GitRepository(linux.Path[H]):
 
             if rev:
                 self.checkout(rev)
+        print('here3')
 
     def git(
         self, *args: typing.Union[str, linux.Path[H], linux.special.Special]

@@ -14,14 +14,17 @@ def safe_flash(board: board.Board, repo: git.GitRepository) -> None:
 
 @tbot.testcase
 def uboot_build_and_flash(
-    lab: typing.Optional[tbot.selectable.LabHost] = None, clean: bool = True
+    lab: typing.Optional[tbot.selectable.LabHost] = None,
+    clean: bool = True,
+    rev: typing.Optional[str] = None,
+    patch: typing.Optional[linux.Path] = None,
 ) -> None:
     with lab or tbot.acquire_lab() as lh:
         # Build U-Boot
         with lh.build() as bh:
             with contextlib.ExitStack() as cx:
                 b = cx.enter_context(tbot.acquire_board(lh))
-                repo = uboot.build(host=bh, clean=clean)
+                repo = uboot.build(host=bh, clean=clean, rev=rev, patch=patch)
                 #ub = cx.enter_context(tbot.acquire_uboot(b))
 
                 safe_flash(b, repo)
